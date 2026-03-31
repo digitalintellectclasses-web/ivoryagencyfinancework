@@ -25,11 +25,11 @@ export default function FinancialTracking() {
   const INCOME_CATEGORIES = ['Service Retainer', 'Project Fee', 'Consulting', 'Other'];
   const EXPENSE_CATEGORIES = ['Software & Tools', 'Ad Spend', 'Rent & Utilities', 'Freelance/Contractors', 'Payroll', 'Other'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
     
-    addTransaction({
+    await addTransaction({
       type,
       amount: Number(amount),
       category,

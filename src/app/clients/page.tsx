@@ -18,11 +18,11 @@ export default function ClientManager() {
   const [activationDate, setActivationDate] = useState(new Date().toISOString().split('T')[0]);
   const [expiryDate, setExpiryDate] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || isNaN(Number(packageTier))) return;
     
-    addClient({
+    await addClient({
       name,
       packageTier: Number(packageTier),
       externalCosts: Number(externalCosts) || 0,

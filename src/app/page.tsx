@@ -19,16 +19,21 @@ export default function Dashboard() {
 
   // Employee creation form state
   const [empUsername, setEmpUsername] = useState('');
+  const [empEmail, setEmpEmail] = useState('');
   const [empPassword, setEmpPassword] = useState('');
   const [empDisplayName, setEmpDisplayName] = useState('');
   const [empSuccess, setEmpSuccess] = useState('');
 
-  const handleCreateEmployee = (e: React.FormEvent) => {
+  const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    createEmployee(empUsername.trim(), empPassword, empDisplayName.trim());
-    setEmpSuccess(`✓ Employee "${empDisplayName}" created.`);
-    setEmpUsername(''); setEmpPassword(''); setEmpDisplayName('');
-    setTimeout(() => setEmpSuccess(''), 3000);
+    try {
+      await createEmployee(empUsername.trim(), empEmail.trim(), empPassword, empDisplayName.trim());
+      setEmpSuccess(`✓ Employee "${empDisplayName}" account prepared.`);
+      setEmpUsername(''); setEmpEmail(''); setEmpPassword(''); setEmpDisplayName('');
+      setTimeout(() => setEmpSuccess(''), 3000);
+    } catch (error: any) {
+      console.error(error);
+    }
   };
 
   // Redirect non-admins to Employee Portal
@@ -290,10 +295,16 @@ export default function Dashboard() {
                 placeholder="e.g. Priya" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">User ID (Login)</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">User ID</label>
               <input required value={empUsername} onChange={e => setEmpUsername(e.target.value)}
                 className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm uppercase"
                 placeholder="e.g. PRIYA" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Email Address</label>
+              <input required type="email" value={empEmail} onChange={e => setEmpEmail(e.target.value)}
+                className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+                placeholder="employee@ivory.agency" />
             </div>
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1">Password</label>

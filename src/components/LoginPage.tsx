@@ -6,7 +6,7 @@ import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -17,14 +17,13 @@ export function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Small simulated delay for polish
-    await new Promise(r => setTimeout(r, 600));
-
-    const success = login(username.trim(), password);
-    if (!success) {
-      setError('Invalid credentials. Please try again.');
+    try {
+      await login(email.trim(), password);
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -51,16 +50,16 @@ export function LoginPage() {
             
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1.5">
-                User ID
+                Email Address
               </label>
               <input
-                type="text"
+                type="email"
                 required
-                autoComplete="username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
+                autoComplete="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 className="block w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                placeholder="Enter your User ID"
+                placeholder="admin@ivory.agency"
               />
             </div>
 

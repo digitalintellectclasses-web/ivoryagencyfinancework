@@ -1,6 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 
 export type Transaction = {
   id: string;
@@ -11,6 +24,7 @@ export type Transaction = {
   date: string;
   managedBy: 'Pratik' | 'Pranav';
   paymentMethod: 'cash' | 'online';
+  createdAt?: any;
 };
 
 export type Client = {
@@ -20,6 +34,7 @@ export type Client = {
   activationDate: string;
   expiryDate: string;
   externalCosts: number;
+  createdAt?: any;
 };
 
 export type PartnerEquity = {
@@ -28,18 +43,20 @@ export type PartnerEquity = {
   type: 'investment' | 'drawing';
   amount: number;
   date: string;
+  createdAt?: any;
 };
 
 export type SalaryPayment = {
   id: string;
-  employeeUserId: string;   // username (e.g. "PRIYANKA")
-  employeeName: string;     // display name
+  employeeUserId: string;
+  employeeName: string;
   amount: number;
-  month: string;            // e.g. "2026-03"
-  date: string;             // actual payment date
+  month: string;
+  date: string;
   paidBy: 'Pratik' | 'Pranav';
   paymentMethod: 'cash' | 'online';
   note: string;
+  createdAt?: any;
 };
 
 type FinanceContextType = {
@@ -48,13 +65,13 @@ type FinanceContextType = {
   equities: PartnerEquity[];
   salaryPayments: SalaryPayment[];
   isAdmin: boolean;
-  addTransaction: (tx: Omit<Transaction, 'id'>) => void;
-  addClient: (client: Omit<Client, 'id'>) => void;
-  addEquity: (equity: Omit<PartnerEquity, 'id'>) => void;
-  addSalaryPayment: (sp: Omit<SalaryPayment, 'id'>) => void;
-  deleteSalaryPayment: (id: string) => void;
-  deleteTransaction: (id: string) => void;
-  deleteClient: (id: string) => void;
+  addTransaction: (tx: Omit<Transaction, 'id'>) => Promise<void>;
+  addClient: (client: Omit<Client, 'id'>) => Promise<void>;
+  addEquity: (equity: Omit<PartnerEquity, 'id'>) => Promise<void>;
+  addSalaryPayment: (sp: Omit<SalaryPayment, 'id'>) => Promise<void>;
+  deleteSalaryPayment: (id: string) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
   setIsAdmin: (val: boolean) => void;
   isLoaded: boolean;
 };
@@ -62,6 +79,7 @@ type FinanceContextType = {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [equities, setEquities] = useState<PartnerEquity[]>([]);
@@ -69,56 +87,81 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from local storage
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('ag_transactions');
-    const savedClients = localStorage.getItem('ag_clients');
-    const savedEquities = localStorage.getItem('ag_equities');
-    const savedSalaries = localStorage.getItem('ag_salaries');
+    if (!currentUser) {
+      setTransactions([]);
+      setClients([]);
+      setEquities([]);
+      setSalaryPayments([]);
+      setIsLoaded(true);
+      return;
+    }
 
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    if (savedClients) setClients(JSON.parse(savedClients));
-    if (savedEquities) setEquities(JSON.parse(savedEquities));
-    if (savedSalaries) setSalaryPayments(JSON.parse(savedSalaries));
-    
+    // Real-time listeners for Firestore collections
+    const unsubTx = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), (snapshot) => {
+      setTransactions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction)));
+    });
+
+    const unsubClients = onSnapshot(collection(db, 'clients'), (snapshot) => {
+      setClients(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Client)));
+    });
+
+    const unsubEquities = onSnapshot(collection(db, 'equities'), (snapshot) => {
+      setEquities(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as PartnerEquity)));
+    });
+
+    const unsubSalaries = onSnapshot(collection(db, 'salaries'), (snapshot) => {
+      setSalaryPayments(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as SalaryPayment)));
+    });
+
     setIsLoaded(true);
-  }, []);
 
-  // Save to local storage
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem('ag_transactions', JSON.stringify(transactions));
-    localStorage.setItem('ag_clients', JSON.stringify(clients));
-    localStorage.setItem('ag_equities', JSON.stringify(equities));
-    localStorage.setItem('ag_salaries', JSON.stringify(salaryPayments));
-  }, [transactions, clients, equities, salaryPayments, isLoaded]);
+    return () => {
+      unsubTx();
+      unsubClients();
+      unsubEquities();
+      unsubSalaries();
+    };
+  }, [currentUser]);
 
-  const addTransaction = (tx: Omit<Transaction, 'id'>) => {
-    setTransactions((prev) => [...prev, { ...tx, id: crypto.randomUUID() }]);
+  const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    await addDoc(collection(db, 'transactions'), {
+      ...tx,
+      createdAt: serverTimestamp(),
+    });
   };
 
-  const addClient = (client: Omit<Client, 'id'>) => {
-    setClients((prev) => [...prev, { ...client, id: crypto.randomUUID() }]);
+  const addClient = async (client: Omit<Client, 'id'>) => {
+    await addDoc(collection(db, 'clients'), {
+      ...client,
+      createdAt: serverTimestamp(),
+    });
   };
 
-  const addEquity = (equity: Omit<PartnerEquity, 'id'>) => {
-    setEquities((prev) => [...prev, { ...equity, id: crypto.randomUUID() }]);
+  const addEquity = async (equity: Omit<PartnerEquity, 'id'>) => {
+    await addDoc(collection(db, 'equities'), {
+      ...equity,
+      createdAt: serverTimestamp(),
+    });
   };
 
-  const addSalaryPayment = (sp: Omit<SalaryPayment, 'id'>) => {
-    setSalaryPayments((prev) => [...prev, { ...sp, id: crypto.randomUUID() }]);
+  const addSalaryPayment = async (sp: Omit<SalaryPayment, 'id'>) => {
+    await addDoc(collection(db, 'salaries'), {
+      ...sp,
+      createdAt: serverTimestamp(),
+    });
   };
 
-  const deleteSalaryPayment = (id: string) => {
-    setSalaryPayments((prev) => prev.filter(s => s.id !== id));
+  const deleteSalaryPayment = async (id: string) => {
+    await deleteDoc(doc(db, 'salaries', id));
   };
 
-  const deleteTransaction = (id: string) => {
-    setTransactions((prev) => prev.filter(t => t.id !== id));
+  const deleteTransaction = async (id: string) => {
+    await deleteDoc(doc(db, 'transactions', id));
   };
 
-  const deleteClient = (id: string) => {
-    setClients((prev) => prev.filter(c => c.id !== id));
+  const deleteClient = async (id: string) => {
+    await deleteDoc(doc(db, 'clients', id));
   };
 
   return (

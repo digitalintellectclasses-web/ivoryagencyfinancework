@@ -17,11 +17,11 @@ export default function EquityLedger() {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
     
-    addEquity({
+    await addEquity({
       partnerId,
       type,
       amount: Number(amount),
