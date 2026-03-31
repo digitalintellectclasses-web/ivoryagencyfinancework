@@ -26,6 +26,7 @@ export default function EmployeesPage() {
   // ── Create Employee form ──
   const [empDisplayName, setEmpDisplayName] = useState('');
   const [empUsername, setEmpUsername] = useState('');   // auto-generated, but editable
+  const [empEmail, setEmpEmail] = useState('');
   const [empPassword, setEmpPassword] = useState('');
   const [generatedId, setGeneratedId] = useState('');
   const [copied, setCopied] = useState(false);
@@ -46,10 +47,10 @@ export default function EmployeesPage() {
 
   const handleCreateEmployee = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empUsername || !empPassword) return;
-    createEmployee(empUsername.trim(), empPassword, empDisplayName.trim());
+    if (!empUsername || !empPassword || !empEmail) return;
+    createEmployee(empUsername.trim(), empEmail.trim().toLowerCase(), empPassword, empDisplayName.trim());
     setCreateSuccess(`✓ Employee "${empDisplayName}" created with ID: ${empUsername}`);
-    setEmpDisplayName(''); setEmpUsername(''); setEmpPassword(''); setGeneratedId('');
+    setEmpDisplayName(''); setEmpUsername(''); setEmpEmail(''); setEmpPassword(''); setGeneratedId('');
     setTimeout(() => setCreateSuccess(''), 4000);
   };
 
@@ -177,6 +178,13 @@ export default function EmployeesPage() {
               {generatedId && (
                 <p className="text-xs text-purple-400 mt-1.5">Generated: <span className="font-mono">{generatedId}</span> — share with employee</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Email</label>
+              <input required type="email" value={empEmail} onChange={e => setEmpEmail(e.target.value)}
+                className="block w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+                placeholder="employee@example.com" />
             </div>
 
             <div>
