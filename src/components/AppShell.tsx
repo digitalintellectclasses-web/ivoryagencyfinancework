@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/store/AuthContext';
 import { useFinance } from '@/store/FinanceContext';
 import { LoginPage } from '@/components/LoginPage';
@@ -8,13 +9,14 @@ import { Sidebar } from '@/components/Sidebar';
 
 /**
  * AppShell is the root client wrapper that:
- * 1. Shows LoginPage if user is not authenticated
+ * 1. Shows LoginPage if user is not authenticated (except on /setup check)
  * 2. Syncs auth role → FinanceContext.isAdmin
  * 3. Renders the full sidebar + main layout when authenticated
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, currentUser, isLoaded: authLoaded } = useAuth();
   const { setIsAdmin, isLoaded: financeLoaded } = useFinance();
+  const pathname = usePathname();
 
   // Keep FinanceContext isAdmin in sync with the authenticated user's role
   useEffect(() => {
@@ -30,6 +32,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="animate-spin h-8 w-8 border-2 border-emerald-500 rounded-full border-t-transparent" />
       </div>
     );
+  }
+
+  // Bypass auth check entirely if on the /setup route
+  if (!isAuthenticated && pathname === '/setup') {
+    return <main className="min-h-screen w-full">{children}</main>;
   }
 
   if (!isAuthenticated) {
